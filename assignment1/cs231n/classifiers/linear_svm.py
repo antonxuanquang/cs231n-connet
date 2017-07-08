@@ -43,10 +43,10 @@ def svm_loss_naive(W, X, y, reg):
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
   loss /= num_train
-  dW /= num_train # why do I have to average dW????
+  dW /= num_train
 
   # Add regularization to the loss.
-  loss += 0.5 * reg * np.sum(W * W) # some solution multiply by 0.5, don't know why but it works too????
+  loss += 0.5 * reg * np.sum(W * W)
   dW += reg * W
 
   #############################################################################

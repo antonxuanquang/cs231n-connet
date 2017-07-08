@@ -2,6 +2,9 @@ import numpy as np
 from random import shuffle
 from past.builtins import xrange
 
+def softmax(array):
+  pass
+
 def softmax_loss_naive(W, X, y, reg):
   """
   Softmax loss function, naive implementation (with loops)
@@ -30,13 +33,37 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_samples = X.shape[0]
+  num_classes = W.shape[1]
+  
+  for i in xrange(num_samples):
+    # compute dot product
+    scores = X[i].dot(W)
+    
+    # shift scores to handle numeric instability
+    scores -= np.max(scores)
+    softmax = np.exp(scores) / np.sum(np.exp(scores))
+    loss += -np.log(softmax[y[i]])
+    
+    for j in xrange(num_classes):
+      # compute dW[i,j]
+      if y[i] == j:
+        dW[:, j] += (softmax[j] - 1) * X[i]
+      else:
+        dW[:, j] += softmax[j] * X[i]
+
+  # average
+  loss /= num_samples
+  dW /= num_samples
+
+  # regularization
+  loss += 0.5 * reg * np.sum(W * W)
+  dW += reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
 
   return loss, dW
-
 
 def softmax_loss_vectorized(W, X, y, reg):
   """
@@ -54,10 +81,29 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_samples = X.shape[0]
+  num_classes = W.shape[1]
+  
+
+  # compute loss
+  scores = X.dot(W)
+  scores -= np.max(scores, axis = 1, keepdims=True)
+  softmax = np.exp(scores) / np.sum(np.exp(scores), axis = 1, keepdims=True)
+  loss = np.sum(-np.log(softmax[np.arange(num_samples), y]))
+    
+  # compute gradient
+  softmax[np.arange(num_samples), y] -= 1
+  dW = X.T.dot(softmax)
+
+  # average
+  loss /= num_samples
+  dW /= num_samples
+
+  # regularization
+  loss += 0.5 * reg * np.sum(W * W)
+  dW += reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
 
   return loss, dW
-
