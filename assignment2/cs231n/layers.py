@@ -146,7 +146,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
     Returns a tuple of:
     - out: of shape (N, D)
-    - cache: A tuple of values needed in the backward pass
+    - cache: A tuple of values needed in the backward pass: X_norm, gamma, out
     """
     mode = bn_param['mode']
     eps = bn_param.get('eps', 1e-5)
@@ -173,7 +173,15 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        sample_mean = np.mean(x, axis = 0)
+        sample_var = np.var(x, axis = 0)
+        X_norm = (x - sample_mean) / np.sqrt(sample_var + eps)
+        out = gamma * X_norm + beta
+        
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
+        
+        cache = (x, sample_mean, sample_var, X_norm, gamma, beta, eps)
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -184,7 +192,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        X_norm = (x - running_mean) / np.sqrt(running_var + eps)
+        out = gamma * X_norm + beta
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -194,6 +203,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # Store the updated running means back into bn_param
     bn_param['running_mean'] = running_mean
     bn_param['running_var'] = running_var
+    
 
     return out, cache
 
@@ -220,7 +230,21 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+    
+    # getting derivative from this website: 
+    # http://wiseodd.github.io/techblog/2016/07/04/batchnorm/
+    (x, mean, var, X_norm, gamma, beta, eps) = cache
+    N, D = dout.shape
+    
+    X_mean = x - mean
+    std_inv = 1.0 / np.sqrt(var + eps)
+
+    dx_norm = dout * gamma
+    dvar = np.sum(-1.0 / 2 * dx_norm * X_mean / (var + eps) ** (3.0 / 2), axis = 0)
+    dmean = np.sum(-1.0 * dx_norm * std_inv, axis = 0) + (dvar * np.mean(-2.0 * X_mean, axis = 0))
+    dx = (dx_norm * std_inv) + (dvar * 2.0 / N * X_mean) + (1.0 * dmean / N)
+    dgamma = np.sum(dout * X_norm, axis = 0)
+    dbeta = np.sum(dout, axis = 0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -250,7 +274,14 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    (x, mean, var, X_norm, gamma, beta, eps) = cache
+    N, D = dout.shape
+    
+    std_inv = 1.0 / np.sqrt(var + eps)
+    dgamma = np.sum(dout * X_norm, axis = 0)
+    dbeta = np.sum(dout, axis = 0)
+    # get this formular from http://costapt.github.io/2016/07/09/batch-norm-alt/
+    dx = (gamma * std_inv / N) * (N * dout - dgamma * X_norm - dbeta)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
