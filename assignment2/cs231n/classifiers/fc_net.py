@@ -224,7 +224,6 @@ class FullyConnectedNet(object):
             if i != self.num_layers and self.use_batchnorm:
                 self.params['gamma%d' % i] = np.ones(all_layer_dims[i])
                 self.params['beta%d' % i] = np.zeros(all_layer_dims[i])
-        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -286,6 +285,7 @@ class FullyConnectedNet(object):
         scores = X
         for i in range(1, self.num_layers + 1):
             cache = 'c%d' % i
+            dropout = 'd%d' % i
             W = self.params['W%d' % i]
             b = self.params['b%d' % i]
             if i != self.num_layers and self.use_batchnorm:
@@ -300,6 +300,9 @@ class FullyConnectedNet(object):
                     scores, caches[cache] = affine_batchnorm_relu_forward(scores, W, b, gamma, beta, bn_param)
                 else:
                     scores, caches[cache] = affine_relu_forward(scores, W, b)
+                    
+                if self.use_dropout:
+                    scores, caches[dropout] = dropout_forward(scores, self.dropout_param)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -332,6 +335,7 @@ class FullyConnectedNet(object):
             dW = 'W%d' % i
             db = 'b%d' % i
             cache = 'c%d' % i
+            dropout = 'd%d' % i
             if i != self.num_layers and self.use_batchnorm:
                 gamma = self.params['gamma%d' % i]
                 beta = self.params['beta%d' % i]
@@ -341,10 +345,15 @@ class FullyConnectedNet(object):
             if i == self.num_layers:
                 gradient, grads[dW], grads[db] = affine_backward(gradient, caches[cache])
             else:
+                if self.use_dropout:
+                    gradient = dropout_backward(gradient, caches[dropout])
+                    
                 if self.use_batchnorm:
                     gradient, grads[dW], grads[db], grads[dbeta], grads[dgamma] = affine_batchnorm_relu_backward(gradient, caches[cache])
                 else:
                     gradient, grads[dW], grads[db] = affine_relu_backward(gradient, caches[cache])
+                    
+                
                     
             # using regularization when not using batch normalization
             if not self.use_batchnorm:
