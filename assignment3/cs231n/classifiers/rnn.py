@@ -137,7 +137,20 @@ class CaptioningRNN(object):
         # defined above to store loss and gradients; grads[k] should give the      #
         # gradients for self.params[k].                                            #
         ############################################################################
-        pass
+        if self.cell_type == 'rnn':
+            cell_forward, cell_backward = rnn_forward, rnn_backward
+        else:
+            cell_forward, cell_backward = lstm_step_forward, lstm_step_backward
+        h0, h0_cache = affine_forward(features, W_proj, b_proj)
+        x, x_cache = word_embedding_forward(captions_in, W_embed)
+        h, h_cache = cell_forward(x, h0, Wx, Wh, b)
+        score, score_cache = temporal_affine_forward(h, W_vocab, b_vocab)
+        loss, d_score = temporal_softmax_loss(score, captions_out, mask)
+        
+        d_h, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(d_score, score_cache)
+        d_x, d_h0, grads['Wx'], grads['Wh'], grads['b'] = cell_backward(d_h, h_cache)
+        grads['W_embed'] = word_embedding_backward(d_x, x_cache)
+        d_features, grads['W_proj'], grads['b_proj'] = affine_backward(d_h0, h0_cache)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
