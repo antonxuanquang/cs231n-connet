@@ -219,12 +219,11 @@ class CaptioningRNN(object):
         vocab_size = W_vocab.shape[1]
         h, _ = affine_forward(features, W_proj, b_proj)
         c = 0
-        word_idx = np.full(N, self._start)
+        word_idx = np.full((N, 1), self._start)
 
         for t in range(max_length):
             # (1) Embed the previous word
-            word_vec, _ = word_embedding_forward(word_idx.reshape(-1, 1), W_embed)
-            
+            word_vec, _ = word_embedding_forward(word_idx, W_embed)
             
             # (2) RNN step or LSTM step
             if self.cell_type == 'rnn':
@@ -236,8 +235,8 @@ class CaptioningRNN(object):
             out, _ = affine_forward(h, W_vocab, b_vocab)     # (N, V)
 
             # (4) select word with highest score 
-            word_idx = np.argmax(out, axis=1)     # (N, 1)
-            captions[:, t] = word_idx
+            word_idx = np.argmax(out, axis=1).reshape(-1, 1)     # (N, 1)
+            captions[:, t:t+1] = word_idx
 
             if self.idx_to_word == '<END>':
                 break
