@@ -140,9 +140,10 @@ class CaptioningRNN(object):
         if self.cell_type == 'rnn':
             cell_forward, cell_backward = rnn_forward, rnn_backward
         else:
-            cell_forward, cell_backward = lstm_step_forward, lstm_step_backward
+            cell_forward, cell_backward = lstm_forward, lstm_backward
         h0, h0_cache = affine_forward(features, W_proj, b_proj)
         x, x_cache = word_embedding_forward(captions_in, W_embed)
+        
         h, h_cache = cell_forward(x, h0, Wx, Wh, b)
         score, score_cache = temporal_affine_forward(h, W_vocab, b_vocab)
         loss, d_score = temporal_softmax_loss(score, captions_out, mask)
@@ -212,7 +213,34 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
-        pass
+        _, input_dim = features.shape
+        wordvec_dim = Wx.shape[0]
+        hidden_dim = Wh.shape[0]
+        vocab_size = W_vocab.shape[1]
+        h, _ = affine_forward(features, W_proj, b_proj)
+        c = 0
+        word_idx = np.full(N, self._start)
+
+        for t in range(max_length):
+            # (1) Embed the previous word
+            word_vec, _ = word_embedding_forward(word_idx.reshape(-1, 1), W_embed)
+            
+            
+            # (2) RNN step or LSTM step
+            if self.cell_type == 'rnn':
+                h, _ = rnn_step_forward(word_vec.reshape(-1, wordvec_dim), h, Wx, Wh, b)  
+            else:
+                h, c, _ = lstm_step_forward(word_vec.reshape(-1, wordvec_dim), h, c, Wx, Wh, b)
+
+            # (3) get socres for all words in the vocab
+            out, _ = affine_forward(h, W_vocab, b_vocab)     # (N, V)
+
+            # (4) select word with highest score 
+            word_idx = np.argmax(out, axis=1)     # (N, 1)
+            captions[:, t] = word_idx
+
+            if self.idx_to_word == '<END>':
+                break
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
